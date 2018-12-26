@@ -1,13 +1,24 @@
-const int stepPin = 3;
-const int dirPin = 4;
-const int endStop1 = 5;
-const int endStop2 = 6;
+const int stepPinHorizontal = 3;
+const int dirPinHorizontal = 4;
+const int endStopLeft = 5;
+const int endStopRight = 6;
+
+const int stepPinVertical = 9;
+const int dirPinVertical = 8;
+const int endStopVerticalUpper = 10;
+const int endStopVerticalLower = 11;
+
+
 
 const int stateInit = 0;
 const int stateLeft = 100;
 const int stateRight = 200;
 const int stateWaitLeft = 300;
 const int stateWaitRight = 400;
+const int stateUp = 500;
+const int stateDown = 600;
+const int stateWaitUp = 700;
+const int stateWaitDown = 800;
 
 const int directionLeft = 1;
 const int directionRight = 2;
@@ -17,16 +28,20 @@ const int actMoveLeft = 100;
 const int actMoveRight = 200;
 const int actWaitLeft = 300;
 const int actWaitRight = 400;
+const int actMoveUp = 500;
+const int actMoveDown = 600;
+const int actWaitDown = 700;
+const int actWaitUp = 800;
 
 void horMovement(int moveDir) {
   if (moveDir == directionLeft) {
-    digitalWrite(dirPin, HIGH);
+    digitalWrite(dirPinHorizontal, HIGH);
   } else {
-    digitalWrite(dirPin, LOW);
+    digitalWrite(dirPinHorizontal, LOW);
   }
-  digitalWrite(stepPin, HIGH);
+  digitalWrite(stepPinHorizontal, HIGH);
   delayMicroseconds(500);
-  digitalWrite(stepPin, LOW);
+  digitalWrite(stepPinHorizontal, LOW);
   delayMicroseconds(500);
 }
 
@@ -75,13 +90,13 @@ class StateMachine {
 
     void readInput() {
       //Serial.println("Read input");
-      endStopLeftState = digitalRead(endStop1);
-      endStopRightState = digitalRead(endStop2);
+      endStopLeftState = digitalRead(endStopLeft);
+      endStopRightState = digitalRead(endStopRight);
     /*
-      if (endStop1State == LOW) {
+      if (endStopLeftState == LOW) {
         currentState = stateLeft;
       }
-      else if (endStop2State == LOW) {
+      else if (endStopRightState == LOW) {
         currentState = stateRight;
       }
 */
@@ -177,10 +192,10 @@ StateMachine stateEngine;
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
-  pinMode(stepPin, OUTPUT);
-  pinMode(dirPin, OUTPUT);
-  pinMode(endStop1, INPUT);
-  pinMode(endStop2, INPUT);
+  pinMode(stepPinHorizontal, OUTPUT);
+  pinMode(dirPinHorizontal, OUTPUT);
+  pinMode(endStopLeft, INPUT);
+  pinMode(endStopRight, INPUT);
 }
 
 void loop() {

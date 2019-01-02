@@ -43,7 +43,7 @@ class StateMachine {
     bool lowerEndStopState;
     bool lowerPippetteEndStopState;
     bool upperPippetteEndStopState;
-    
+
 
     StateMachine() {
       leftEndStopState = LOW;
@@ -120,9 +120,9 @@ class StateMachine {
       String horizontalEndStops = "LeftEndStop: " + String(leftEndStopState) + " ;  RightEndStop: " + String(rightEndStopState) + "\n";
       String pippetteEndStops = "UpperPipEndStop: " + String(upperPippetteEndStopState) + " ; lowerPippetteEndStop: " + String(lowerPippetteEndStopState) + "\n";
       String states = "Current state: " + String(currentState) + " ; Next state: " + String(nextState) + "\n";
-      String logString = verticalEndStops + horizontalEndStops + states + pippetteEndStops + "\n";
+      String logString = verticalEndStops + horizontalEndStops + pippetteEndStops + states + "\n";
       Serial.println(logString);
-      
+
       if (currentState == stateInit) {
         if ((nextState == stateUpperLeft) && (currentState != stateUpperLeft) && (leftEndStopState == HIGH)) {
           return actMoveLeft;
@@ -171,7 +171,7 @@ class StateMachine {
           currentState = stateLowerLeft;
           nextState = stateUpperLeft;
           return actMoveUp;
-        } else if ((nextState == stateLowerRight) && (currentState != stateLowerRight) && (upperPippetteEndStopState == LOW) && (lowerEndStopState == LOW)){
+        } else if ((nextState == stateLowerRight) && (currentState != stateLowerRight) && (upperPippetteEndStopState == LOW) && (lowerEndStopState == LOW)) {
           currentState = stateLowerRight;
           nextState = stateUpperRight;
           return actMoveUp;
@@ -188,13 +188,13 @@ class StateMachine {
         }
       }
       if (currentState == statePippetteLow) {
-        if ((nextState == statePippetteUp) && (currentState != statePippetteUp) && (upperPippetteEndStopState == HIGH)){
+        if ((nextState == statePippetteUp) && (currentState != statePippetteUp) && (upperPippetteEndStopState == HIGH)) {
           return actPippetteUp;
         } else {
           currentState = statePippetteUp;
-          if (leftEndStopState == LOW){
+          if (leftEndStopState == LOW) {
             nextState = stateLowerLeft;
-          } else if (rightEndStopState == LOW){
+          } else if (rightEndStopState == LOW) {
             nextState = stateLowerRight;
           }
           return actIdle;
@@ -203,10 +203,10 @@ class StateMachine {
       if (currentState == stateUpperRight) {
         if ((nextState == stateLowerRight) && (currentState != stateLowerRight) && (lowerEndStopState == HIGH)) {
           return actMoveDown;
-        } else if ((nextState == stateUpperLeft) && (currentState != stateUpperLeft) && (leftEndStopState == HIGH)){
+        } else if ((nextState == stateUpperLeft) && (currentState != stateUpperLeft) && (leftEndStopState == HIGH)) {
           return actMoveLeft;
         } else {
-          if (leftEndStopState == LOW){
+          if (leftEndStopState == LOW) {
             currentState = stateUpperLeft;
             nextState = stateLowerLeft;
             return actMoveDown;
@@ -222,7 +222,7 @@ class StateMachine {
           currentState = statePippetteUp;
           nextState = statePippetteLow;
           return actPippetteDown;
-        } else if ((nextState == stateUpperRight) && (currentState != stateUpperRight) && (upperEndStopState == HIGH)){
+        } else if ((nextState == stateUpperRight) && (currentState != stateUpperRight) && (upperEndStopState == HIGH)) {
           return actMoveUp;
         } else {
           if (upperEndStopState == LOW) {

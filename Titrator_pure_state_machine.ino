@@ -11,6 +11,8 @@ const int lowerPippetteEndStop = 2;
 const int pipDirPin = 12;
 const int pipStepPin = 13;
 
+const int verticalPulsesLimit = 1000;
+
 const int dirLeft = 100;
 const int dirRight = 200;
 const int dirDown = 300;
@@ -37,6 +39,7 @@ class StateMachine {
   public:
     int currentState = stateInit;
     int nextState = stateUpperLeft;
+    int numberOfVerticalPulses;
     bool leftEndStopState;
     bool rightEndStopState;
     bool upperEndStopState;
@@ -90,6 +93,7 @@ class StateMachine {
       } else if ((moveDir == dirUp) && (upperEndStopState == LOW)) {
         return;
       } else {
+        numberOfVerticalPulses ++;
         digitalWrite(verStepPin, HIGH);
         delayMicroseconds(500);
         digitalWrite(verStepPin, LOW);
@@ -116,12 +120,13 @@ class StateMachine {
     }
 
     int nextAction() {
-      String verticalEndStops = "UpperEndStop: " + String(upperEndStopState) + " ; LowerEndStop: " + String(lowerEndStopState) + "\n";
-      String horizontalEndStops = "LeftEndStop: " + String(leftEndStopState) + " ;  RightEndStop: " + String(rightEndStopState) + "\n";
-      String pippetteEndStops = "UpperPipEndStop: " + String(upperPippetteEndStopState) + " ; lowerPippetteEndStop: " + String(lowerPippetteEndStopState) + "\n";
-      String states = "Current state: " + String(currentState) + " ; Next state: " + String(nextState) + "\n";
-      String logString = verticalEndStops + horizontalEndStops + pippetteEndStops + states + "\n";
-      Serial.println(logString);
+//      String verticalEndStops = "UpperEndStop: " + String(upperEndStopState) + " ; LowerEndStop: " + String(lowerEndStopState) + "\n";
+//      String horizontalEndStops = "LeftEndStop: " + String(leftEndStopState) + " ;  RightEndStop: " + String(rightEndStopState) + "\n";
+//      String pippetteEndStops = "UpperPipEndStop: " + String(upperPippetteEndStopState) + " ; lowerPippetteEndStop: " + String(lowerPippetteEndStopState) + "\n";
+//      String states = "Current state: " + String(currentState) + " ; Next state: " + String(nextState) + "\n";
+//      String verticalPulses = "Amount of verPulses: " + String(numberOfVerticalPulses) + "\n";
+//      String logString = verticalEndStops + horizontalEndStops + pippetteEndStops + verticalPulses + states + "\n";
+//      Serial.println(logString);
 
       if (currentState == stateInit) {
         if ((nextState == stateUpperLeft) && (currentState != stateUpperLeft) && (leftEndStopState == HIGH)) {
@@ -143,6 +148,7 @@ class StateMachine {
             nextState = statePippetteUp;
             return actIdle;
           } else if (rightEndStopState == LOW) {
+            numberOfVerticalPulses = 0;
             currentState = stateUpperRight;
             nextState = stateLowerRight;
             return actMoveDown;
@@ -171,7 +177,7 @@ class StateMachine {
           currentState = stateLowerLeft;
           nextState = stateUpperLeft;
           return actMoveUp;
-        } else if ((nextState == stateLowerRight) && (currentState != stateLowerRight) && (upperPippetteEndStopState == LOW) && (lowerEndStopState == LOW)) {
+        } else if ((nextState == stateLowerRight) && (currentState != stateLowerRight) && (upperPippetteEndStopState == LOW)) {
           currentState = stateLowerRight;
           nextState = stateUpperRight;
           return actMoveUp;
@@ -194,14 +200,14 @@ class StateMachine {
           currentState = statePippetteUp;
           if (leftEndStopState == LOW) {
             nextState = stateLowerLeft;
-          } else if (rightEndStopState == LOW) {
+          } else if (leftEndStopState == HIGH) {
             nextState = stateLowerRight;
           }
           return actIdle;
         }
       }
       if (currentState == stateUpperRight) {
-        if ((nextState == stateLowerRight) && (currentState != stateLowerRight) && (lowerEndStopState == HIGH)) {
+        if ((nextState == stateLowerRight) && (currentState != stateLowerRight) && (lowerEndStopState == HIGH) && (numberOfVerticalPulses < verticalPulsesLimit)) {
           return actMoveDown;
         } else if ((nextState == stateUpperLeft) && (currentState != stateUpperLeft) && (leftEndStopState == HIGH)) {
           return actMoveLeft;
@@ -210,7 +216,8 @@ class StateMachine {
             currentState = stateUpperLeft;
             nextState = stateLowerLeft;
             return actMoveDown;
-          } else if (lowerEndStopState == LOW) {
+          } else if ((lowerEndStopState == LOW) || (numberOfVerticalPulses >= verticalPulsesLimit)) {
+            numberOfVerticalPulses = 0;
             currentState = stateLowerRight;
             nextState = statePippetteUp;
             return actIdle;
@@ -218,7 +225,7 @@ class StateMachine {
         }
       }
       if (currentState == stateLowerRight) {
-        if ((nextState == statePippetteUp) && (currentState != statePippetteUp) && (rightEndStopState == LOW) && (upperEndStopState == HIGH)) {
+        if ((nextState == statePippetteUp) && (currentState != statePippetteUp) && (upperEndStopState == HIGH)) {
           currentState = statePippetteUp;
           nextState = statePippetteLow;
           return actPippetteDown;
@@ -257,8 +264,7 @@ void setup() {
 void loop() {
   stateEngine.readInput();
   int nextAction = stateEngine.nextAction();
-  String nextActionLog = "Next action: " + String(nextAction);
-  Serial.println(nextActionLog);
+// 
   switch (nextAction) {
     case (actMoveLeft):
       stateEngine.horMovement(dirLeft);

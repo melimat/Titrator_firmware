@@ -10,8 +10,10 @@ const int upperPippetteEndStop = 7;
 const int lowerPippetteEndStop = 2;
 const int pipDirPin = 12;
 const int pipStepPin = 13;
+const int stirPin = A1;
 
 const int verticalPulsesLimit = 1000;
+const int stirTime = 10000;
 
 const int dirLeft = 100;
 const int dirRight = 200;
@@ -25,6 +27,7 @@ const int stateUpperLeft = 600;
 const int stateLowerLeft = 700;
 const int statePippetteLow = 800;
 const int statePippetteUp = 900;
+const int stateStirring = 1000;
 
 const int actIdle = 0;
 const int actMoveLeft = 100;
@@ -33,6 +36,7 @@ const int actMoveDown = 500;
 const int actMoveUp = 600;
 const int actPippetteDown = 700;
 const int actPippetteUp = 800;
+const int actStir = 1000;
 
 
 class StateMachine {
@@ -46,6 +50,8 @@ class StateMachine {
     bool lowerEndStopState;
     bool lowerPippetteEndStopState;
     bool upperPippetteEndStopState;
+    bool stirring;
+    unsigned long stirringStartTime;
 
 
     StateMachine() {
@@ -118,6 +124,19 @@ class StateMachine {
         delayMicroseconds(500);
       }
     }
+    void stir(){
+      if (stirring != true){
+        stirringStartTime = millis();
+        stirring = true;
+        digitalWrite(stirPin, HIGH);
+      } else if ((stirring == true) && ((millis() - stirringStartTime) < stirTime)){
+        digitalWrite(stirPin, HIGH);
+      } else if ((stirring == true) && ((millis() - stirringStartTime) >= stirTime)){
+        digitalWrite(stirPin, LOW);
+        stirring = false;
+        stirringStartTime = 0;
+      }
+    }
 
     int nextAction() {
 //      String verticalEndStops = "UpperEndStop: " + String(upperEndStopState) + " ; LowerEndStop: " + String(lowerEndStopState) + "\n";
@@ -182,7 +201,7 @@ class StateMachine {
           nextState = stateUpperRight;
           return actMoveUp;
         } else {
-          if (lowerPippetteEndStopState == LOW) {
+          if ((lowerPippetteEndStopState == LOW) && (nextState == statePippetteLow)) {
             currentState = statePippetteLow;
             nextState = statePippetteUp;
             return actPippetteUp;
@@ -211,6 +230,10 @@ class StateMachine {
           return actMoveDown;
         } else if ((nextState == stateUpperLeft) && (currentState != stateUpperLeft) && (leftEndStopState == HIGH)) {
           return actMoveLeft;
+        } else if ((nextState == stateStirring) && (currentState != stateStirring) && (upperEndStopState == LOW)){
+          currentState = stateStirring;
+          nextState = stateUpperRight;
+          return actStir;
         } else {
           if (leftEndStopState == LOW) {
             currentState = stateUpperLeft;
@@ -224,6 +247,15 @@ class StateMachine {
           }
         }
       }
+      if (currentState == stateStirring){
+        if ((stirring == true) && (nextState == stateUpperRight) && (currentState != stateUpperRight)){
+          return actStir;
+        } else if ((stirring == false) && (nextState == stateUpperRight) && (currentState != stateUpperRight)){
+          currentState = stateUpperRight;
+          nextState = stateUpperLeft;
+          return actMoveLeft;
+        }
+      }
       if (currentState == stateLowerRight) {
         if ((nextState == statePippetteUp) && (currentState != statePippetteUp) && (upperEndStopState == HIGH)) {
           currentState = statePippetteUp;
@@ -232,10 +264,10 @@ class StateMachine {
         } else if ((nextState == stateUpperRight) && (currentState != stateUpperRight) && (upperEndStopState == HIGH)) {
           return actMoveUp;
         } else {
-          if (upperEndStopState == LOW) {
+          if ((upperEndStopState == LOW) && (nextState == stateUpperRight)) {
             currentState = stateUpperRight;
-            nextState = stateUpperLeft;
-            return actMoveLeft;
+            nextState = stateStirring;
+            return actStir;
           }
         }
       }
@@ -257,6 +289,7 @@ void setup() {
   pinMode(lowerPippetteEndStop, INPUT);
   pinMode(pipStepPin, OUTPUT);
   pinMode(pipDirPin, OUTPUT);
+  pinMode(stirPin, OUTPUT);
   Serial.begin(250000);
 
 }
@@ -283,6 +316,9 @@ void loop() {
       break;
     case (actPippetteDown):
       stateEngine.pipMovement(dirDown);
+      break;
+    case (actStir):
+      stateEngine.stir();
       break;
     default:
       0;

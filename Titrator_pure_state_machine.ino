@@ -11,9 +11,18 @@ const int lowerPippetteEndStop = 2;
 const int pipDirPin = 12;
 const int pipStepPin = 13;
 const int stirPin = A1;
+const int phPin = A0;
 
 const int verticalPulsesLimit = 1000;
 const int stirTime = 10000;
+
+const float voltagePHmiddle = 2.5;
+const float voltagePHlower = 3.0;
+const float voltagePHupper = 2.1;
+float PH_step_lower = (voltagePHmiddle - voltagePHlower) / (6.86 - 4.01);
+float PH_step_upper = (voltagePHmiddle - voltagePHupper) / (6.86 - 9.18);
+const int measuringInterval = 1000;
+const int numberOfMeasurements = 10;
 
 const int dirLeft = 100;
 const int dirRight = 200;
@@ -38,12 +47,24 @@ const int actPippetteDown = 700;
 const int actPippetteUp = 800;
 const int actStir = 1000;
 
+float measureRawValue() {
+  int measure = analogRead(phPin);
+  double voltage = 5 / 1024.0 * measure;
+  float Po;
+  if (voltage >= voltagePHmiddle) {
+    Po = 7 + ((2.5 - voltage) / PH_step_lower);
+  } else if (voltage <= voltagePHmiddle) {
+    Po = 7 + ((2.5 - voltage) / PH_step_upper);
+  }
+  return (Po);
+}
 
 class StateMachine {
   public:
     int currentState = stateInit;
     int nextState = stateUpperLeft;
     int numberOfVerticalPulses;
+    int numberOfAddOperations;
     bool leftEndStopState;
     bool rightEndStopState;
     bool upperEndStopState;
@@ -51,7 +72,11 @@ class StateMachine {
     bool lowerPippetteEndStopState;
     bool upperPippetteEndStopState;
     bool stirring;
+    bool processingOfData;
     unsigned long stirringStartTime;
+    unsigned long lastMeasuringTime;
+    int performedMeasurements;
+    float phArray[10];
 
 
     StateMachine() {
@@ -124,28 +149,66 @@ class StateMachine {
         delayMicroseconds(500);
       }
     }
-    void stir(){
-      if (stirring != true){
-        stirringStartTime = millis();
+    void stir() {
+      unsigned long currentTime = millis();
+      float ph = 0;
+      if ((stirring != true) && (processingOfData != true)) {
+        digitalWrite(stirPin, HIGH);
+        stirringStartTime = currentTime;
+        numberOfAddOperations += 1;
+        ph = measureRawValue();
+        Serial.println(ph);
+        lastMeasuringTime = currentTime;
+        performedMeasurements += 1;
+        phArray[performedMeasurements - 1] = ph;
         stirring = true;
+      } else if ((stirring == true) && ((currentTime - stirringStartTime) <= stirTime)) {
         digitalWrite(stirPin, HIGH);
-      } else if ((stirring == true) && ((millis() - stirringStartTime) < stirTime)){
-        digitalWrite(stirPin, HIGH);
-      } else if ((stirring == true) && ((millis() - stirringStartTime) >= stirTime)){
+        if (((currentTime - lastMeasuringTime) >= measuringInterval) && (performedMeasurements < numberOfMeasurements)) {
+          ph = measureRawValue();
+          Serial.println(ph);
+          lastMeasuringTime = currentTime;
+          performedMeasurements += 1;
+          phArray[performedMeasurements - 1] = ph;
+        }
+      } else if ((stirring == true) && ((currentTime - stirringStartTime) >= stirTime)) {
         digitalWrite(stirPin, LOW);
-        stirring = false;
+        processingOfData = true;
+        performedMeasurements = 0;
         stirringStartTime = 0;
+      }
+      if (processingOfData == true) {
+        float backup = 0;
+        float sumOfAllElements = 0;
+        float average = 0;
+        for (int i = 0; i < 9; i++) {
+          for (int j = i + 1; j < 10; j++) {
+            if (phArray[i] > phArray[j]) {
+              backup = phArray[i];
+              phArray[j] = phArray[i];
+              phArray[i] = backup;
+            }
+          }
+        }
+        for (int i = 1; i < 9; i++) {
+          sumOfAllElements += phArray[i];
+        }
+        average = sumOfAllElements / 8;
+        String logString = "Adds: " + String(numberOfAddOperations) + "; Ph: " + String(average) + "\n";
+        Serial.println(logString);
+        stirring = false;
+        processingOfData = false;
       }
     }
 
     int nextAction() {
-//      String verticalEndStops = "UpperEndStop: " + String(upperEndStopState) + " ; LowerEndStop: " + String(lowerEndStopState) + "\n";
-//      String horizontalEndStops = "LeftEndStop: " + String(leftEndStopState) + " ;  RightEndStop: " + String(rightEndStopState) + "\n";
-//      String pippetteEndStops = "UpperPipEndStop: " + String(upperPippetteEndStopState) + " ; lowerPippetteEndStop: " + String(lowerPippetteEndStopState) + "\n";
-//      String states = "Current state: " + String(currentState) + " ; Next state: " + String(nextState) + "\n";
-//      String verticalPulses = "Amount of verPulses: " + String(numberOfVerticalPulses) + "\n";
-//      String logString = verticalEndStops + horizontalEndStops + pippetteEndStops + verticalPulses + states + "\n";
-//      Serial.println(logString);
+      //      String verticalEndStops = "UpperEndStop: " + String(upperEndStopState) + " ; LowerEndStop: " + String(lowerEndStopState) + "\n";
+      //      String horizontalEndStops = "LeftEndStop: " + String(leftEndStopState) + " ;  RightEndStop: " + String(rightEndStopState) + "\n";
+      //      String pippetteEndStops = "UpperPipEndStop: " + String(upperPippetteEndStopState) + " ; lowerPippetteEndStop: " + String(lowerPippetteEndStopState) + "\n";
+      //      String states = "Current state: " + String(currentState) + " ; Next state: " + String(nextState) + "\n";
+      //      String verticalPulses = "Amount of verPulses: " + String(numberOfVerticalPulses) + "\n";
+      //      String logString = verticalEndStops + horizontalEndStops + pippetteEndStops + verticalPulses + states + "\n";
+      //      Serial.println(logString);
 
       if (currentState == stateInit) {
         if ((nextState == stateUpperLeft) && (currentState != stateUpperLeft) && (leftEndStopState == HIGH)) {
@@ -230,7 +293,7 @@ class StateMachine {
           return actMoveDown;
         } else if ((nextState == stateUpperLeft) && (currentState != stateUpperLeft) && (leftEndStopState == HIGH)) {
           return actMoveLeft;
-        } else if ((nextState == stateStirring) && (currentState != stateStirring) && (upperEndStopState == LOW)){
+        } else if ((nextState == stateStirring) && (currentState != stateStirring) && (upperEndStopState == LOW)) {
           currentState = stateStirring;
           nextState = stateUpperRight;
           return actStir;
@@ -247,10 +310,10 @@ class StateMachine {
           }
         }
       }
-      if (currentState == stateStirring){
-        if ((stirring == true) && (nextState == stateUpperRight) && (currentState != stateUpperRight)){
+      if (currentState == stateStirring) {
+        if ((stirring == true) && (nextState == stateUpperRight) && (currentState != stateUpperRight)) {
           return actStir;
-        } else if ((stirring == false) && (nextState == stateUpperRight) && (currentState != stateUpperRight)){
+        } else if ((stirring == false) && (nextState == stateUpperRight) && (currentState != stateUpperRight)) {
           currentState = stateUpperRight;
           nextState = stateUpperLeft;
           return actMoveLeft;
@@ -290,6 +353,7 @@ void setup() {
   pinMode(pipStepPin, OUTPUT);
   pinMode(pipDirPin, OUTPUT);
   pinMode(stirPin, OUTPUT);
+  pinMode(phPin, INPUT);
   Serial.begin(250000);
 
 }
@@ -297,7 +361,7 @@ void setup() {
 void loop() {
   stateEngine.readInput();
   int nextAction = stateEngine.nextAction();
-// 
+  //
   switch (nextAction) {
     case (actMoveLeft):
       stateEngine.horMovement(dirLeft);

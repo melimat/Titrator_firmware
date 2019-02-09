@@ -157,7 +157,7 @@ class StateMachine {
         stirringStartTime = currentTime;
         numberOfAddOperations += 1;
         ph = measureRawValue();
-        Serial.println(ph);
+        //Serial.println(ph);
         lastMeasuringTime = currentTime;
         performedMeasurements += 1;
         phArray[performedMeasurements - 1] = ph;
@@ -166,7 +166,7 @@ class StateMachine {
         digitalWrite(stirPin, HIGH);
         if (((currentTime - lastMeasuringTime) >= measuringInterval) && (performedMeasurements < numberOfMeasurements)) {
           ph = measureRawValue();
-          Serial.println(ph);
+          //Serial.println(ph);
           lastMeasuringTime = currentTime;
           performedMeasurements += 1;
           phArray[performedMeasurements - 1] = ph;
@@ -194,7 +194,7 @@ class StateMachine {
           sumOfAllElements += phArray[i];
         }
         average = sumOfAllElements / 8;
-        String logString = "Adds: " + String(numberOfAddOperations) + "; Ph: " + String(average) + "\n";
+        String logString = "Adds:" + String(numberOfAddOperations) + ";Ph:" + String(average);
         Serial.println(logString);
         stirring = false;
         processingOfData = false;
@@ -354,7 +354,7 @@ void setup() {
   pinMode(pipDirPin, OUTPUT);
   pinMode(stirPin, OUTPUT);
   pinMode(phPin, INPUT);
-  Serial.begin(250000);
+  Serial.begin(9600);
 
 }
 

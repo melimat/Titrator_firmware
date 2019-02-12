@@ -77,6 +77,8 @@ class StateMachine {
     unsigned long lastMeasuringTime;
     int performedMeasurements;
     float phArray[10];
+    String prevSerialData;
+    String serialData;
 
 
     StateMachine() {
@@ -93,6 +95,14 @@ class StateMachine {
       lowerEndStopState = digitalRead(lowerEndStop);
       lowerPippetteEndStopState = digitalRead(lowerPippetteEndStop);
       upperPippetteEndStopState = digitalRead(upperPippetteEndStop);
+      String serialPacket;
+      if (Serial.available()){
+        serialPacket = Serial.readString();
+        if ((serialPacket != prevSerialData) && (serialPacket.length() > 1)){
+          prevSerialData = serialData;
+          serialData = serialPacket;
+        }
+      }
     }
 
     void horMovement(int moveDir) {
@@ -209,8 +219,11 @@ class StateMachine {
       //      String verticalPulses = "Amount of verPulses: " + String(numberOfVerticalPulses) + "\n";
       //      String logString = verticalEndStops + horizontalEndStops + pippetteEndStops + verticalPulses + states + "\n";
       //      Serial.println(logString);
+      if (serialData == "STOP\r\n"){
+        return actIdle;
+      }
 
-      if (currentState == stateInit) {
+      if ((currentState == stateInit) && (serialData == "START\r\n" )){
         if ((nextState == stateUpperLeft) && (currentState != stateUpperLeft) && (leftEndStopState == HIGH)) {
           return actMoveLeft;
         } else {

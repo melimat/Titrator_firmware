@@ -1,15 +1,15 @@
 const int leftEndStop = 5;
-const int rightEndStop = 6;
-const int horDirPin = 4;
-const int horStepPin = 3;
-const int upperEndStop = 11;
-const int lowerEndStop = 10;
-const int verDirPin = 8;
-const int verStepPin = 9;
-const int upperPippetteEndStop = 7;
-const int lowerPippetteEndStop = 2;
-const int pipDirPin = 12;
-const int pipStepPin = 13;
+const int rightEndStop = 4;
+const int horDirPin = 8;
+const int horStepPin = 9;
+const int upperEndStop = 7;
+const int lowerEndStop = 6;
+const int verDirPin = 12;
+const int verStepPin = 13;
+const int upperPippetteEndStop = 2;
+const int lowerPippetteEndStop = 3;
+const int pipDirPin = 10;
+const int pipStepPin = 11;
 const int stirPin = A1;
 const int phPin = A0;
 
@@ -52,9 +52,9 @@ float measureRawValue() {
   double voltage = 5 / 1024.0 * measure;
   float Po;
   if (voltage >= voltagePHmiddle) {
-    Po = 7 + ((2.5 - voltage) / PH_step_lower);
+    Po = 6.86 - ((voltagePHmiddle - voltage) / PH_step_lower);
   } else if (voltage <= voltagePHmiddle) {
-    Po = 7 + ((2.5 - voltage) / PH_step_upper);
+    Po = 6.86 - ((voltagePHmiddle - voltage) / PH_step_upper);
   }
   return (Po);
 }
@@ -194,7 +194,7 @@ class StateMachine {
         for (int i = 0; i < 9; i++) {
           for (int j = i + 1; j < 10; j++) {
             if (phArray[i] > phArray[j]) {
-              backup = phArray[i];
+              backup = phArray[j];
               phArray[j] = phArray[i];
               phArray[i] = backup;
             }
